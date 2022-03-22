@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 # -
 
 def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5, n_samples=1, feat_type='stft',n_fft=512, win_size=224, step_size=80,
-                 n_hop=512//8, sr=8000, norm_per_sample=True, debug=False, to_dash=False, batch_size=32):
+                 n_hop=512//8, sr=8000, norm_per_sample=True, debug=False, to_dash=False, batch_size=16):
 
         '''dir_out = None if we want to save files in the same folder that we read from.
            det_threshold=0.5 determines the threshold above which an event is classified as positive. See detect_timestamps for 
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     parser.add_argument("--win_size", default=30, type=int, help="Window size.")
     parser.add_argument("--step_size", default=30, type=int, help="Step size.")
     parser.add_argument("--BNN_samples", default=10, type=int, help="Number of MC dropout samples.")
-
+    parser.add_argument("--batch_size", default=16, type=int, help="Batch size.")
 
     # dir_out=None, det_threshold=0.5, n_samples=10, feat_type='log-mel',n_feat=128, win_size=40, step_size=40,
     #              n_hop=512, sr=8000, norm=False, debug=False, to_filter=False
@@ -147,7 +147,8 @@ if __name__ == "__main__":
     step_size = args.step_size
     n_samples = args.BNN_samples
     norm_per_sample=args.norm
+    batch_size = args.batch_size
 
 
     write_output(rootFolderPath, audio_format, dir_out=dir_out, norm_per_sample=norm_per_sample,
-                 win_size=win_size, step_size=step_size, to_dash=to_dash, n_samples=n_samples)
+                 win_size=win_size, step_size=step_size, to_dash=to_dash, n_samples=n_samples, batch_size=batch_size)

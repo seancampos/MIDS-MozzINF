@@ -130,7 +130,8 @@ class Model(nn.Module):
         #### you'll have to inspect the model to see the names
         self.spec_layer = features.STFT(n_fft=NFFT, freq_bins=None, hop_length=n_hop,
                               window='hann', freq_scale='linear', center=True, pad_mode='reflect',
-                          fmin=400, fmax=2000, sr=sr, output_format="Magnitude", trainable=True)
+                          fmin=400, fmax=2000, sr=sr, output_format="Magnitude", trainable=True,
+                             verbose=False)
         #### end layer freezing        
         self.out = nn.Linear(self.backbone.num_features, 1)
         self.sizer = T.Resize((image_size,image_size))
