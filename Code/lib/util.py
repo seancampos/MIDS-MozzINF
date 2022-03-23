@@ -213,7 +213,7 @@ def detect_timestamps_BNN(preds_prob, G_X, U_X, hop_length=512, det_threshold=0.
             preds[i] = 1
 
 
-    frames = librosa.frames_to_samples(np.arange(len(preds)), hop_length=512)  
+    frames = librosa.frames_to_samples(np.arange(len(preds)), hop_length=hop_length)  
     sample_start = 0
     prob_start_idx = 0
     preds_list = []
