@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as T
 import torchaudio
+import librosa
 import timm
 from nnAudio import features
 
@@ -15,11 +16,12 @@ def get_wav_for_path_pipeline(path_names, sr):
     if sr:
         effects.extend([
           ["bandpass", f"400",f"1000"],
-          ["rate", f'{sr}'],
-          ['gain', '-n'],
+#           ["rate", f'{sr}'],
+          ['gain', '-n']
         ])
     for path in path_names:
-        waveform, rate = torchaudio.sox_effects.apply_effects_file(path, effects=effects)
+        signal, rate = librosa.load(path, sr=sr)
+        waveform, _ = torchaudio.sox_effects.apply_effects_tensor(torch.tensor(signal).expand([2,-1]), sample_rate=rate, effects=effects)
         f = waveform[0]
         mu = torch.std_mean(f)[1]
         st = torch.std_mean(f)[0]
@@ -28,11 +30,6 @@ def get_wav_for_path_pipeline(path_names, sr):
         x.append(signal)
         signal_length += len(signal[0])/sr
     return x, signal_length
-
-# +
-# x, xl = get_wav_for_path_pipeline(['../data/199900.wav'],8000)
-# -
-
 
 
 class Normalization():
@@ -131,7 +128,7 @@ class Model(nn.Module):
         self.spec_layer = features.STFT(n_fft=NFFT, freq_bins=None, hop_length=n_hop,
                               window='hann', freq_scale='linear', center=True, pad_mode='reflect',
                           fmin=400, fmax=2000, sr=sr, output_format="Magnitude", trainable=True,
-                             verbose=False)
+                                       verbose=False)
         #### end layer freezing        
         self.out = nn.Linear(self.backbone.num_features, 1)
         self.sizer = T.Resize((image_size,image_size))

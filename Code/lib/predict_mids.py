@@ -1,14 +1,4 @@
 # +
-
-# I had to find the right version of pytorch with the widget here https://pytorch.org/
-#pip install torch==1.10.2+cu113 torchvision==0.11.3+cu113 torchaudio==0.10.2+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
-
-# other dependencies
-#pip install timm
-
-## nnAudio
-#pip install git+https://github.com/KinWaiCheuk/nnAudio.git#subdirectory=Installation
-
 import os
 import util
 import util_dashboard as util_dash
@@ -43,9 +33,8 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
         checkpoint = torch.load('../models/model_e28_2022_03_14_05_46_11.pth')
         model.load_state_dict(checkpoint)
         model = model.to(device)
+        model.eval()
         model_name = 'mids_v1'
-
-        
 
         mozz_audio_list = []
         
@@ -84,7 +73,7 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
                             G_X_to_timestamp = np.repeat(G_X, step_size, axis=0)
                             U_X_to_timestamp = np.repeat(U_X, step_size, axis=0)
                             preds_list = util.detect_timestamps_BNN(y_to_timestamp, G_X_to_timestamp, U_X_to_timestamp, 
-                                                                det_threshold=det_threshold)   
+                                                                hop_length=n_hop, det_threshold=det_threshold)   
 
                             if debug:
                                 print(preds_list)
@@ -131,8 +120,9 @@ if __name__ == "__main__":
     parser.add_argument("--norm", default=True, help="Normalise feature windows with respect to themsleves.")
     parser.add_argument("--win_size", default=30, type=int, help="Window size.")
     parser.add_argument("--step_size", default=30, type=int, help="Step size.")
-    parser.add_argument("--BNN_samples", default=10, type=int, help="Number of MC dropout samples.")
+    parser.add_argument("--BNN_samples", default=1, type=int, help="Number of MC dropout samples.")
     parser.add_argument("--batch_size", default=16, type=int, help="Batch size.")
+
 
     # dir_out=None, det_threshold=0.5, n_samples=10, feat_type='log-mel',n_feat=128, win_size=40, step_size=40,
     #              n_hop=512, sr=8000, norm=False, debug=False, to_filter=False
@@ -152,3 +142,5 @@ if __name__ == "__main__":
 
     write_output(rootFolderPath, audio_format, dir_out=dir_out, norm_per_sample=norm_per_sample,
                  win_size=win_size, step_size=step_size, to_dash=to_dash, n_samples=n_samples, batch_size=batch_size)
+
+
