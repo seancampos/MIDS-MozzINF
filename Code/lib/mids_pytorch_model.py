@@ -119,7 +119,7 @@ class Model(nn.Module):
         super().__init__()
         # num_classes=0 removes the pretrained head
         self.backbone = timm.create_model(model_name,
-                        pretrained=False, num_classes=0, in_chans=1, 
+                        pretrained=False, num_classes=2, in_chans=1, 
                         drop_path_rate=0.05, global_pool='max',
                         drop_rate=0.05)
         #####  This section is model specific
@@ -130,7 +130,6 @@ class Model(nn.Module):
                           fmin=400, fmax=2000, sr=sr, output_format="Magnitude", trainable=True,
                                        verbose=False)
         #### end layer freezing        
-        self.out = nn.Linear(self.backbone.num_features, 1)
         self.sizer = T.Resize((image_size,image_size))
         self.norm_layer = Normalization(mode='framewise')
         self.pcen_layer = PCENTransform(eps=1e-6, s=0.025, alpha=0.6, delta=0.1, r=0.2, trainable=True)
@@ -148,10 +147,8 @@ class Model(nn.Module):
         spec = self.sizer(spec)
         x = spec.unsqueeze(1)
         # then repeat channels
-        x = self.backbone(x)
-        
-        pred = self.out(x)
-        
+        pred = self.backbone(x)
+                
         output = {"prediction": pred,
                   "spectrogram": spec}
         return output

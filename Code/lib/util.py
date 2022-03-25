@@ -257,10 +257,15 @@ def detect_timestamps_BNN(preds_prob, G_X, U_X, hop_length=512, det_threshold=0.
 # Bayesian Neural Network
 
 def active_BALD(out, X, n_classes):
+    
+    if type(X) == int:
+        frame_cnt = X
+    else:
+        frame_cnt = X.shape[0]
 
-    log_prob = np.zeros((out.shape[0], X.shape[0], n_classes))
-    score_All = np.zeros((X.shape[0], n_classes))
-    All_Entropy = np.zeros((X.shape[0],))
+    log_prob = np.zeros((out.shape[0], frame_cnt, n_classes))
+    score_All = np.zeros((frame_cnt, n_classes))
+    All_Entropy = np.zeros((frame_cnt,))
     for d in range(out.shape[0]):
 #         print ('Dropout Iteration', d)
 #         params = unflatten(np.squeeze(out[d]),layer_sizes,nn_weight_index)
