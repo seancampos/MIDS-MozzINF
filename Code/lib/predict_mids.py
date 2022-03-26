@@ -101,9 +101,10 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
 
                             if to_dash: 
                                 mozz_audio_filename, audio_length, has_mosquito = util_dash.write_audio_for_plot(text_output_filename, root, filename, output_filename, root_out, sr)
-                                if has_mosquito:
-                                    plot_filename = util_dash.plot_mozz_MI(X_CNN, y_to_timestamp[:,1], U_X_to_timestamp, 0.5, root_out, output_filename)
-                                    util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
+#                                if has_mosquito:
+#                                    print('X tensor to numpy shape',np.shape(X.cpu().detach().numpy()))
+#                                    plot_filename = util_dash.plot_mozz_MI(X.cpu().detach().numpy(), y_to_timestamp[:,1], U_X_to_timestamp, 0.5, root_out, output_filename)
+#                                    util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
                     except Exception as e:
                         print("[ERROR] Unable to load {}, {} ".format(os.path.join(root, filename)),e)
 

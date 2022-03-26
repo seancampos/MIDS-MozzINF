@@ -12,39 +12,65 @@ import csv
 #phase 1 (Bandundu) - 03/11/21 to 20/11-21
 #phase 2 (Kinshasa) - 19/12/21 to 07/01/22
 
-start_datetime = datetime.datetime(2021, 11, 3, 0, 0, 0, 0)
-end_datetime = datetime.datetime(2021, 11, 20, 23, 59, 59, 999999)
+start_datetime = datetime.datetime(2021, 4, 1, 0, 0, 0, 0)
+end_datetime = datetime.datetime(2021, 4, 18, 23, 59, 59, 999999)
 
-uuid_list = ['8a927dd5e08dbef5',
-'10fbf4b13c671633',
-'c3d4fee59c9c1d61',
-'5a610a26bbad4f14',
-'4d3267fd607d95aa',
-'4466eac2bc69b460',
-'45db7eb36c7ff23b',
-'b1d6b22d0c4ce91f',
-'15830e8d271a6cdb',
-'f7ddba7798a1c699',
-'34e297039f74b322',
-'99c4599e66ea233e',
-'94062f72a15b1a4b',
-'f4afabece3523bb3',
-'4ed245c3a206ea0c',
-'050aab6fc4651530',
-'dec13370cfa75e87',
-'f66362ad68730ec6',
-'9cb110903f13bc00',
-'e8f4fb5267a1527c',
-'5b877b5a4a47c1fc',
-'484702488240b8bb',
-'fc23d8eb1dea2de2',
-'13b41fda42f8fa85',
-'03d783523b494250',
-'c55f8f34cf2e361f',
-'0c3da0a3ca8e17c4',
-'f233297f6aa1c68a',
-'57f6be3e2678ff2d',
-'6a0db05c070473fe']
+#CDC-LT data
+uuid_list = ['d385e1b68fa7923d',
+'b6ad50e1ebacb386',
+'d46f6702f2a75740',
+'dad28ee0340af679',
+'a7458ad53ddbf7e6',
+'3074dbf3fcb314cf',
+'958366f3121e92d5',
+'1ed700912d6025a6',
+'0507652c4a9e9864',
+'3067124cbfdf60f8',
+'9e6c3cbbd3445920',
+'1ab5a92539a170ca',
+'4a037b051a4af466',
+'a432c599e3083890',
+'62bee527ab53962f',
+'9758c3cffe723cea',
+'638d6c4847b45e66',
+'17868b64c67cc6aa',
+'165f6e3fe5373e33',
+'8b59018fc336a79c',
+'35ef0b8167a68874',
+'79c0d1541492c0cb',
+'a99e37f87e3fab90',
+'fb17f55b65e60452']
+
+#uuid_list = ['8a927dd5e08dbef5',
+#'10fbf4b13c671633',
+#'c3d4fee59c9c1d61',
+#'5a610a26bbad4f14',
+#'4d3267fd607d95aa',
+#'4466eac2bc69b460',
+#'45db7eb36c7ff23b',
+#'b1d6b22d0c4ce91f',
+#'15830e8d271a6cdb',
+#'f7ddba7798a1c699',
+#'34e297039f74b322',
+#'99c4599e66ea233e',
+#'94062f72a15b1a4b',
+#'f4afabece3523bb3',
+#'4ed245c3a206ea0c',
+#'050aab6fc4651530',
+#'dec13370cfa75e87',
+#'f66362ad68730ec6',
+#'9cb110903f13bc00',
+#'e8f4fb5267a1527c',
+#'5b877b5a4a47c1fc',
+#'484702488240b8bb',
+#'fc23d8eb1dea2de2',
+#'13b41fda42f8fa85',
+#'03d783523b494250',
+#'c55f8f34cf2e361f',
+#'0c3da0a3ca8e17c4',
+#'f233297f6aa1c68a',
+#'57f6be3e2678ff2d',
+#'6a0db05c070473fe']
 
 
 
@@ -52,10 +78,10 @@ uuid_list = ['8a927dd5e08dbef5',
 
 # root = '/home/ivank/dbmount/MozzWearPlot/'
 root = ''  # Check the location of filepath root is pointing to: currently superfluous parameter, but label OUTPUT could be shortened (see comments in code)
-out_dir = '/home/ivank/audio_out/'
+out_dir = '/home/ivank/audio_out/BNN_neurips_best/'
 # root = 'G:/CDC-LT-Tanzania/'
 
-p_threshold = 0.8  # probability threshold over which to accept positive predictions as mosquito
+p_threshold = 0.5  # probability threshold over which to accept positive predictions as mosquito
 MI_threshold = 1.0 # uncertainty threshold UNDER which to accept positive predictions as mosquito (1.0 is maximum entropy, see paper for parameter settings)
 
 
@@ -83,7 +109,7 @@ myquery = {"uuid": {"$in": uuid_list}, "datetime_recorded": {"$gt": start_dateti
 mydoc = recordings.find(myquery)
 
 df = pd.DataFrame(list(mydoc))
-
+print(df)
 
 
 # pasted from collate_mozz_pred.py
@@ -95,13 +121,14 @@ def find_mozz_pred(df, file_out):
 
     for idx, row in df.iterrows():
         path = row['path'].replace('/data/MozzWear', '/home/ivank/dbmount/MozzWearPlot')
+        print(path)
         # Warning: some files are missing an audio extension, whereas others have it present. In newer versions, the syntax below works:
         # print(path[:-4] + '_mozz_pred.wav'). In older, path[:] + '_mozz_pred.wav'
         # if wave file of positive predictions exists, append the wave file and labels to dataframe:
-        if os.path.isfile(path[:-4] + '_mozz_pred.wav'):
+        if os.path.isfile(path[:] + '_mozz_pred.wav'):
             file_count+=1
-            df.loc[idx, 'mozz_pred_wav'] = path[:-4] + '_mozz_pred.wav'
-            df.loc[idx, 'mozz_pred_labels'] = path[:-4] + '_mozz_pred.txt'
+            df.loc[idx, 'mozz_pred_wav'] = path[:] + '_mozz_pred.wav'
+            df.loc[idx, 'mozz_pred_labels'] = path[:] + '_mozz_pred.txt'
     print('Found files with mosquito predictions:', file_count)
     df.to_csv(file_out, index=False)
 
