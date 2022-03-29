@@ -13,6 +13,8 @@ import torch.nn as nn
 import argparse
 import matplotlib.pyplot as plt
 
+from scipy.signal import medfilt
+
 
 # -
 
@@ -29,7 +31,7 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
         softmax = nn.Softmax(dim=1)
         model = Model('convnext_small')
 #         https://drive.google.com/file/d/1OAC_e_KiDs8ofIEHzoAal-4Z4qHmJ1cl/view?usp=sharing
-        checkpoint = torch.load('../../../HumBugDB/outputs/models/pytorch/model_e2_2022_03_25_10_55_17.pth')
+        checkpoint = torch.load('../models/model_e2_2022_03_25_10_55_17.pth')
         model.load_state_dict(checkpoint)
         model = model.to(device)
         model.eval()
@@ -72,10 +74,20 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
                                 del X
                                 del X_batch
                                 del preds
+                                
+                                mean_pred = np.mean(out,axis=0)
+                                # Experimental median filter
+                                kernel_size = 5
+                                
+                                preds_filt = np.zeros([len(mean_pred),2])
+                                preds_filt[:,1] = medfilt(mean_pred[:,1], kernel_size=kernel_size)
+                                preds_filt[:,0] = 1 - mean_pred[:,1]
+                                
 
                                 G_X, U_X, _ = util.active_BALD(np.log(out), frame_cnt, 2)
+                                out = preds_filt
 
-                                y_to_timestamp = np.repeat(np.mean(out, axis=0), step_size, axis=0)
+                                y_to_timestamp = np.repeat(out, step_size, axis=0)
                                 G_X_to_timestamp = np.repeat(G_X, step_size, axis=0)
                                 U_X_to_timestamp = np.repeat(U_X, step_size, axis=0)
                                 preds_list = util.detect_timestamps_BNN(y_to_timestamp, G_X_to_timestamp, U_X_to_timestamp, 
@@ -107,9 +119,9 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
 
                                 if to_dash: 
                                     mozz_audio_filename, audio_length, has_mosquito = util_dash.write_audio_for_plot(text_output_filename, root, filename, output_filename, root_out, sr)
-                                    if has_mosquito:
-                                        plot_filename = util_dash.plot_mozz_MI(X_CNN, y_to_timestamp[:,1], U_X_to_timestamp, 0.5, root_out, output_filename)
-                                        util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
+                                   # if has_mosquito:
+                                      #  plot_filename = util_dash.plot_mozz_MI(X.cpu().detach().numpy(), y_to_timestamp[:,1], U_X_to_timestamp, 0.5, root_out, output_filename)
+                                      #  util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
                         except Exception as e:
                             print("[ERROR] Unable to load {}, {} ".format(os.path.join(root, filename)),e)
 
