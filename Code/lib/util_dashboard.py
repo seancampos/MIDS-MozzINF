@@ -4,7 +4,7 @@ import numpy as np
 import csv
 import os
 import librosa
-
+import soundfile as sf
 # Change plot properties
 
 COLOR = 'white'
@@ -98,7 +98,7 @@ def write_audio_for_plot(text_output_filename, root, filename, output_filename, 
     audio_length = start_time
     audio_output_filename = os.path.join(dir_out, output_filename) + '_mozz_pred.wav'
     if mozz_audio_list:
-        librosa.output.write_wav(audio_output_filename, np.hstack(mozz_audio_list), sr, norm=False)
+        sf.write(audio_output_filename, np.hstack(mozz_audio_list), sr, 'PCM_24')
         has_mosquito=True
     np.savetxt(audio_output_filename[:-4] + '.txt', mozz_meta, fmt='%s', delimiter='\t')
     return audio_output_filename, audio_length, has_mosquito
