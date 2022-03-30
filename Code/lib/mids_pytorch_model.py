@@ -120,14 +120,14 @@ class Model(nn.Module):
         # num_classes=0 removes the pretrained head
         self.backbone = timm.create_model(model_name,
                         pretrained=False, num_classes=2, in_chans=1, 
-                        drop_path_rate=0.05, global_pool='max',
+                        drop_path_rate=0.05, global_pool='avgmax',
                         drop_rate=0.05)
         #####  This section is model specific
         #### It freezes some fo the layers by name
         #### you'll have to inspect the model to see the names
         self.spec_layer = features.STFT(n_fft=NFFT, freq_bins=None, hop_length=n_hop,
                               window='hann', freq_scale='linear', center=True, pad_mode='reflect',
-                          fmin=400, fmax=2000, sr=sr, output_format="Magnitude", trainable=True,
+                          fmin=300, fmax=1600, sr=sr, output_format="Magnitude", trainable=True,
                                        verbose=False)
         #### end layer freezing        
         self.sizer = T.Resize((image_size,image_size))

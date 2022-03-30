@@ -16,8 +16,9 @@ import matplotlib.pyplot as plt
 
 # -
 
-def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5, n_samples=1, feat_type='stft',n_fft=512, win_size=224, step_size=80,
-                 n_hop=512//8, sr=8000, norm_per_sample=True, debug=False, to_dash=False, batch_size=16):
+def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5, n_samples=1, feat_type='stft',
+                 n_fft=1024, win_size=384, step_size=64,
+                 n_hop=128, sr=8000, norm_per_sample=True, debug=False, to_dash=False, batch_size=32):
 
         '''dir_out = None if we want to save files in the same folder that we read from.
            det_threshold=0.5 determines the threshold above which an event is classified as positive. See detect_timestamps for 
@@ -27,9 +28,9 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
         
         device = torch.device('cuda:0' if torch.cuda.is_available() else torch.device("cpu"))
         softmax = nn.Softmax(dim=1)
-        model = Model('convnext_small')
-#         https://drive.google.com/file/d/1OAC_e_KiDs8ofIEHzoAal-4Z4qHmJ1cl/view?usp=sharing
-        checkpoint = torch.load('../../../HumBugDB/outputs/models/pytorch/model_e2_2022_03_25_10_55_17.pth')
+        model = Model('convnext_base_384_in22ft1k',image_size=win_size,NFFT=n_fft,n_hop=n_hop)
+#         https://drive.google.com/file/d/1UTV9uBo76Ko_yRyg3dFz8l9TsDORaN03/view?usp=sharing
+        checkpoint = torch.load('../../../HumBugDB/outputs/models/pytorch/model_e4_2022_03_30_19_42_55.pth')
         model.load_state_dict(checkpoint)
         model = model.to(device)
         model.eval()
@@ -59,17 +60,21 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
                                 frame_cnt = X.shape[0]
 
                                 out = []
+                                X_CNN = []
                                 for i in range(n_samples):
                                     preds_batch = []
+                                    spec_batch = []
                                     for X_batch in torch.split(X,batch_size,0):
-                                        preds = model(X_batch)['prediction']
-                                        preds_prod = softmax(preds).cpu().detach().numpy()
+                                        preds = model(X_batch)
+                                        preds_prod = softmax(preds['prediction']).cpu().detach().numpy()
                                         preds_batch.append(preds_prod)
+                                        spec_batch.append(preds['spectrogram'].cpu().detach().numpy())
                                     out.append(np.concatenate(preds_batch))
+                                    X_CNN.append(np.concatenate(spec_batch))
 
                                 del x
                                 del x_l
-                                del X
+                                
                                 del X_batch
                                 del preds
 
@@ -108,8 +113,9 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
                                 if to_dash: 
                                     mozz_audio_filename, audio_length, has_mosquito = util_dash.write_audio_for_plot(text_output_filename, root, filename, output_filename, root_out, sr)
                                     if has_mosquito:
-                                        plot_filename = util_dash.plot_mozz_MI(X_CNN, y_to_timestamp[:,1], U_X_to_timestamp, 0.5, root_out, output_filename)
+                                        plot_filename = util_dash.plot_mozz_MI(X_CNN[0], y_to_timestamp[:,1], U_X_to_timestamp, 0.5, root_out, output_filename)
                                         util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
+                                del X
                         except Exception as e:
                             print("[ERROR] Unable to load {}, {} ".format(os.path.join(root, filename)),e)
 
@@ -124,10 +130,10 @@ if __name__ == "__main__":
     parser.add_argument("--dir_out", help="Output directory. If not specified, predictions are output to the same folder as source.")
     parser.add_argument("--to_dash", default=False, type=bool, help="Save predicted audio, video, and corresponding labels to same directory as dictated by dir_out.")
     parser.add_argument("--norm", default=True, help="Normalise feature windows with respect to themsleves.")
-    parser.add_argument("--win_size", default=30, type=int, help="Window size.")
-    parser.add_argument("--step_size", default=30, type=int, help="Step size.")
+    parser.add_argument("--win_size", default=384, type=int, help="Window size.")
+    parser.add_argument("--step_size", default=64, type=int, help="Step size.")
     parser.add_argument("--BNN_samples", default=1, type=int, help="Number of MC dropout samples.")
-    parser.add_argument("--batch_size", default=16, type=int, help="Batch size.")
+    parser.add_argument("--batch_size", default=32, type=int, help="Batch size.")
 
 
     # dir_out=None, det_threshold=0.5, n_samples=10, feat_type='log-mel',n_feat=128, win_size=40, step_size=40,
@@ -148,3 +154,5 @@ if __name__ == "__main__":
 
     write_output(rootFolderPath, audio_format, dir_out=dir_out, norm_per_sample=norm_per_sample,
                  win_size=win_size, step_size=step_size, to_dash=to_dash, n_samples=n_samples, batch_size=batch_size)
+
+

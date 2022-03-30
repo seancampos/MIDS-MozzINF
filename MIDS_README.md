@@ -16,7 +16,7 @@ docker run --gpus all -p 8888:8888 -v /YOUR_DIRECTORY:/my_data --ipc=host --ulim
 
 The model checkpoint is available here:
 ```
-https://drive.google.com/file/d/1OAC_e_KiDs8ofIEHzoAal-4Z4qHmJ1cl/view?usp=sharing
+https://drive.google.com/file/d/1UTV9uBo76Ko_yRyg3dFz8l9TsDORaN03/view?usp=sharing
 ```
 
 It's currently a large model.  Working to optimize and reduce parameter count in the coming weeks.
