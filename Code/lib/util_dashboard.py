@@ -86,7 +86,9 @@ def write_audio_for_plot(text_output_filename, root, filename, output_filename, 
     has_mosquito = False
     start_time = 0
     
-    waveform, sample_rate = torchaudio.load(os.path.join(root,filename))
+    signal, sample_rate = librosa.load(os.path.join(root,filename))
+    
+    waveform = torch.tensor(signal).unsqueeze(0)
     
     resampler = T.Resample(sample_rate, sr, dtype=waveform.dtype)
     resampled_waveform = resampler(waveform)
