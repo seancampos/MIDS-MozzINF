@@ -106,7 +106,7 @@ def write_audio_for_plot(text_output_filename, root, filename, output_filename, 
             
             #mozz_audio_list.append(librosa.load(os.path.join(root,filename), offset=float(line[0]),
             #                                         duration=duration, sr=sr)[0])
-            mozz_audio_list.append(resampled_waveform[:,int(float(line[0])*sr):int(duration*sr)])
+            mozz_audio_list.append(resampled_waveform[:,int(float(line[0])*sr):int(float(line[1])*sr)])
             start_time += duration  # Append length of previous prediction to transfer i
     audio_length = start_time
     audio_output_filename = os.path.join(dir_out, output_filename) + '_mozz_pred.wav'
