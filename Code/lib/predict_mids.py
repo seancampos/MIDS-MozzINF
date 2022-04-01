@@ -17,8 +17,8 @@ import matplotlib.pyplot as plt
 # -
 
 def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5, n_samples=1, feat_type='stft',
-                 n_fft=1024, win_size=384, step_size=64,
-                 n_hop=128, sr=8000, norm_per_sample=True, debug=False, to_dash=False, batch_size=32):
+                 n_fft=1024, win_size=224, step_size=80,
+                 n_hop=128, sr=8000, norm_per_sample=True, debug=False, to_dash=False, batch_size=16):
 
         '''dir_out = None if we want to save files in the same folder that we read from.
            det_threshold=0.5 determines the threshold above which an event is classified as positive. See detect_timestamps for 
@@ -28,9 +28,9 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
         
         device = torch.device('cuda:0' if torch.cuda.is_available() else torch.device("cpu"))
         softmax = nn.Softmax(dim=1)
-        model = Model('convnext_base_384_in22ft1k',image_size=win_size,NFFT=n_fft,n_hop=n_hop)
-#         https://drive.google.com/file/d/1UTV9uBo76Ko_yRyg3dFz8l9TsDORaN03/view?usp=sharing
-        checkpoint = torch.load('../../../HumBugDB/outputs/models/pytorch/model_e4_2022_03_30_19_42_55.pth')
+        model = Model('swin_large_patch4_window12_384',image_size=win_size,NFFT=n_fft,n_hop=n_hop)
+#         https://drive.google.com/file/d/1LmC5QiYWHwdefiM2QZLQ70SAw368emSj/view?usp=sharing
+        checkpoint = torch.load('../../../HumBugDB/outputs/models/pytorch/model_e0_2022_03_29_21_47_46.pth') #swin_large_patch4_window12_384
         model.load_state_dict(checkpoint)
         model = model.to(device)
         model.eval()
@@ -130,10 +130,10 @@ if __name__ == "__main__":
     parser.add_argument("--dir_out", help="Output directory. If not specified, predictions are output to the same folder as source.")
     parser.add_argument("--to_dash", default=False, type=bool, help="Save predicted audio, video, and corresponding labels to same directory as dictated by dir_out.")
     parser.add_argument("--norm", default=True, help="Normalise feature windows with respect to themsleves.")
-    parser.add_argument("--win_size", default=384, type=int, help="Window size.")
-    parser.add_argument("--step_size", default=64, type=int, help="Step size.")
+    parser.add_argument("--win_size", default=30, type=int, help="Window size.")
+    parser.add_argument("--step_size", default=30, type=int, help="Step size.")
     parser.add_argument("--BNN_samples", default=1, type=int, help="Number of MC dropout samples.")
-    parser.add_argument("--batch_size", default=32, type=int, help="Batch size.")
+    parser.add_argument("--batch_size", default=16, type=int, help="Batch size.")
 
 
     # dir_out=None, det_threshold=0.5, n_samples=10, feat_type='log-mel',n_feat=128, win_size=40, step_size=40,
