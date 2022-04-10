@@ -5,7 +5,7 @@ import util_dashboard as util_dash
 import numpy as np
 import sys
 
-from mids_pytorch_model import Model, get_wav_for_path_pipeline
+from mids_pytorch_model import Model, get_wav_for_path_pipeline, plot_mids_MI
 
 import torch
 import torch.nn as nn
@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 # -
 
 def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5, n_samples=1, feat_type='stft',
-                 n_fft=1024, win_size=224, step_size=80,
+                 n_fft=1024, win_size=360, step_size=120,
                  n_hop=128, sr=8000, norm_per_sample=True, debug=False, to_dash=False, batch_size=16):
 
         '''dir_out = None if we want to save files in the same folder that we read from.
@@ -27,10 +27,14 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
         # audio_format = '.wav'
         
         device = torch.device('cuda:0' if torch.cuda.is_available() else torch.device("cpu"))
-        softmax = nn.Softmax(dim=1)
-        model = Model('swin_large_patch4_window12_384',image_size=win_size,NFFT=n_fft,n_hop=n_hop)
-#         https://drive.google.com/file/d/1LmC5QiYWHwdefiM2QZLQ70SAw368emSj/view?usp=sharing
-        checkpoint = torch.load('../../../HumBugDB/outputs/models/pytorch/model_e0_2022_03_29_21_47_46.pth') #swin_large_patch4_window12_384
+        softmax = nn.Softmax(dim=1))
+        
+        model = Model('convnext_base_384_in22ft1k',image_size=win_size,NFFT=n_fft,n_hop=n_hop)
+        #        https://drive.google.com/file/d/1fAzdxz_faoDylgjb1ipireVrrRAdMFo8/view?usp=sharing
+        checkpoint = torch.load('../../../HumBugDB/outputs/models/pytorch/model_presentation_draft_2022_04_07_11_52_08.pth')
+        
+    
+    
         model.load_state_dict(checkpoint)
         model = model.to(device)
         model.eval()
@@ -54,38 +58,57 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
                             if x_l < (n_hop * win_size)/sr: 
                                 print('Signal length too short, skipping:', x_l, filename) 
                             else:
-                                x = x[0].to(device)
-                                X = x.unfold(1,win_size*n_hop,step_size*n_hop).transpose(0,1) # b, 1, s
+                                frame_cnt = x[0].shape[1]//(step_size*n_hop)
 
-                                frame_cnt = X.shape[0]
+                                pad_amt = (win_size-step_size)*n_hop
+                                pad_l = torch.zeros(1,pad_amt) + (0.1**0.5)*torch.randn(1, pad_amt)
+                                pad_r = torch.zeros(1,pad_amt) + (0.1**0.5)*torch.randn(1, pad_amt)
+                                X = torch.cat([pad_l,x[0],pad_r],dim=1).unfold(1,win_size*n_hop,step_size*n_hop).transpose(0,1).to(device) # b, 1, s
 
                                 out = []
                                 X_CNN = []
-                                for i in range(n_samples):
-                                    preds_batch = []
-                                    spec_batch = []
-                                    for X_batch in torch.split(X,batch_size,0):
-                                        preds = model(X_batch)
-                                        preds_prod = softmax(preds['prediction']).cpu().detach().numpy()
-                                        preds_batch.append(preds_prod)
-                                        spec_batch.append(preds['spectrogram'].cpu().detach().numpy())
-                                    out.append(np.concatenate(preds_batch))
-                                    X_CNN.append(np.concatenate(spec_batch))
+#                                 for i in range(n_samples):
+                                preds_batch = []
+                                spec_batch = []
+                                for X_batch in torch.split(X,batch_size,0):
+                                    preds = model(X_batch)
+                                    preds_prod = softmax(preds['prediction']).cpu().detach()
+                                    preds_batch.append(preds_prod)
+                                    spec_batch.append(preds['spectrogram'].cpu().detach().numpy())
+                                out = torch.cat(preds_batch)
+                                X_CNN.append(np.concatenate(spec_batch))
 
                                 del x
                                 del x_l
                                 
                                 del X_batch
                                 del preds
-
-                                G_X, U_X, _ = util.active_BALD(np.log(out), frame_cnt, 2)
-
-                                y_to_timestamp = np.repeat(np.mean(out, axis=0), step_size, axis=0)
-                                G_X_to_timestamp = np.repeat(G_X, step_size, axis=0)
-                                U_X_to_timestamp = np.repeat(U_X, step_size, axis=0)
-                                preds_list = util.detect_timestamps_BNN(y_to_timestamp, G_X_to_timestamp, U_X_to_timestamp, 
-                                                                    hop_length=n_hop, det_threshold=det_threshold)   
-
+                                
+                                p = torch.cat([out[i:frame_cnt+i,1:2] for i in range(win_size//step_size)],dim=-1).mean(dim=1).numpy()
+                                
+                                b_out = np.array([torch.cat([out[i:frame_cnt+i,0:1],out[i:frame_cnt+i,1:2]],dim=1).numpy() for i in range(win_size//step_size)])
+                                
+                                G_X, U_X, _ = util.active_BALD(np.log(b_out), frame_cnt, 2)
+                                
+                                true_indexes = np.where(p>det_threshold)[0]
+                                # group by consecutive indexes
+                                true_group_indexes = np.split(true_indexes, np.where(np.diff(true_indexes) != 1)[0]+1)
+                                
+                                true_hop_indexes = np.where(p>det_threshold)[0]
+                                # group by consecutive indexes
+                                true_hop_group_indexes = np.split(true_hop_indexes, np.where(np.diff(true_hop_indexes) != 1)[0]+1)
+                                
+                                preds_list = []
+                                for hop_group in true_hop_group_indexes:
+                                    row = []
+                                    row.append(hop_group[0]*step_size*n_hop/sr)
+                                    row.append((hop_group[-1]+1)*step_size*n_hop/sr)
+                                    p_str = "{:.4f}".format(p[hop_group].mean()) +\
+                                        " PE: " + "{:.4f}".format(np.mean(G_X[hop_group])) +\
+                                        " MI: " + "{:.4f}".format(np.mean(U_X[hop_group]))
+                                    row.append(p_str)
+                                    preds_list.append(row)
+                                    
                                 if debug:
                                     print(preds_list)
                                     for times in preds_list:
@@ -109,11 +132,11 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
 
                                 text_output_filename = os.path.join(root_out, output_filename) + '_MIDS_step_' + str(step_size) + '_samples_' + str(n_samples) + '_'+ str(model_name) + '.txt'
                                 np.savetxt(text_output_filename, preds_list, fmt='%s', delimiter='\t')
-
+                                
                                 if to_dash: 
                                     mozz_audio_filename, audio_length, has_mosquito = util_dash.write_audio_for_plot(text_output_filename, root, filename, output_filename, root_out, sr)
                                     if has_mosquito:
-                                        plot_filename = util_dash.plot_mozz_MI(X_CNN[0], y_to_timestamp[:,1], U_X_to_timestamp, 0.5, root_out, output_filename)
+                                        plot_filename = plot_mids_MI(X_CNN[0][:frame_cnt,:,-step_size:], p, U_X, 0.5, root_out, output_filename)
                                         util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
                                 del X
                         except Exception as e:
