@@ -19,7 +19,7 @@ def get_wav_for_path_pipeline(path_names, sr):
     if sr:
         effects.extend([
           #["bandpass", f"400",f"1000"],
-#           ["rate", f'{sr}'],
+          #["rate", f'{sr}'],
           ['gain', '-n'],
         ["highpass", f"200"]
         ])

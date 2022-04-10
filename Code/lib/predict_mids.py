@@ -38,7 +38,7 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
         model.load_state_dict(checkpoint)
         model = model.to(device)
         model.eval()
-        model_name = 'mids_v1'
+        model_name = 'mids_v4'
 
         mozz_audio_list = []
         
@@ -153,8 +153,8 @@ if __name__ == "__main__":
     parser.add_argument("--dir_out", help="Output directory. If not specified, predictions are output to the same folder as source.")
     parser.add_argument("--to_dash", default=False, type=bool, help="Save predicted audio, video, and corresponding labels to same directory as dictated by dir_out.")
     parser.add_argument("--norm", default=True, help="Normalise feature windows with respect to themsleves.")
-    parser.add_argument("--win_size", default=30, type=int, help="Window size.")
-    parser.add_argument("--step_size", default=30, type=int, help="Step size.")
+    parser.add_argument("--win_size", default=360, type=int, help="Window size.")
+    parser.add_argument("--step_size", default=120, type=int, help="Step size.")
     parser.add_argument("--BNN_samples", default=1, type=int, help="Number of MC dropout samples.")
     parser.add_argument("--batch_size", default=16, type=int, help="Batch size.")
 
