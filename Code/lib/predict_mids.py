@@ -27,7 +27,7 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
         # audio_format = '.wav'
         
         device = torch.device('cuda:0' if torch.cuda.is_available() else torch.device("cpu"))
-        softmax = nn.Softmax(dim=1))
+        softmax = nn.Softmax(dim=1)
         
         model = Model('convnext_base_384_in22ft1k',image_size=win_size,NFFT=n_fft,n_hop=n_hop)
         #        https://drive.google.com/file/d/1fAzdxz_faoDylgjb1ipireVrrRAdMFo8/view?usp=sharing
