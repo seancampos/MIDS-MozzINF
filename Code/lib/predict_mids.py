@@ -141,7 +141,7 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
                                         util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
                                 del X
                         except Exception as e:
-                            print("[ERROR] Unable to load {}, {} ".format(os.path.join(root, filename)),e)
+                            print("[ERROR] Unable to load {}, {} ".format(os.path.join(root, filename),e))
 
         print('Total files of ' + str(audio_format) + ' format processed:', i_signal)
 
