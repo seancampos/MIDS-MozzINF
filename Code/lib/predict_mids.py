@@ -100,14 +100,15 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
                                 
                                 preds_list = []
                                 for hop_group in true_hop_group_indexes:
-                                    row = []
-                                    row.append(hop_group[0]*step_size*n_hop/sr)
-                                    row.append((hop_group[-1]+1)*step_size*n_hop/sr)
-                                    p_str = "{:.4f}".format(p[hop_group].mean()) +\
-                                        " PE: " + "{:.4f}".format(np.mean(G_X[hop_group])) +\
-                                        " MI: " + "{:.4f}".format(np.mean(U_X[hop_group]))
-                                    row.append(p_str)
-                                    preds_list.append(row)
+                                    if len(hop_group) > 0:
+                                        row = []
+                                        row.append(hop_group[0]*step_size*n_hop/sr)
+                                        row.append((hop_group[-1]+1)*step_size*n_hop/sr)
+                                        p_str = "{:.4f}".format(p[hop_group].mean()) +\
+                                            " PE: " + "{:.4f}".format(np.mean(G_X[hop_group])) +\
+                                            " MI: " + "{:.4f}".format(np.mean(U_X[hop_group]))
+                                        row.append(p_str)
+                                        preds_list.append(row)
                                     
                                 if debug:
                                     print(preds_list)
