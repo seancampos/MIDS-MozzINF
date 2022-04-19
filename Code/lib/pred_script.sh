@@ -1,5 +1,5 @@
 #!/bin/bash
-for i in {06..30}
+for i in {08..30}
 do
-	python -W ignore predict.py --dir_out /home/ivank/dbmount/MozzWearPlot/2021-11-$i/ --to_dash True /home/ivank/dbmount/MozzWear/2021-11-$i/ .aac
+	python -W ignore predict_mids.py --dir_out /humbug-data/mids_pres_draft/MozzWearPlot/2021-04-$i/ --to_dash True /home/ivank/dbmount/MozzWear/2021-04-$i/ .aac
 done

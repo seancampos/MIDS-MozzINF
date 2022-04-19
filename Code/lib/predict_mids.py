@@ -31,18 +31,18 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
         
         model = Model('convnext_base_384_in22ft1k',image_size=win_size,NFFT=n_fft,n_hop=n_hop)
         #        https://drive.google.com/file/d/1fAzdxz_faoDylgjb1ipireVrrRAdMFo8/view?usp=sharing
-        checkpoint = torch.load('../../../HumBugDB/outputs/models/pytorch/model_presentation_draft_2022_04_07_11_52_08.pth')
+        checkpoint = torch.load('../models/model_presentation_draft_2022_04_07_11_52_08.pth')
         
     
     
         model.load_state_dict(checkpoint)
         model = model.to(device)
         model.eval()
-        model_name = 'mids_v4'
+        model_name = 'mids_pres_draft'
 
         mozz_audio_list = []
         
-        print('Processing:', rootFolderPath, 'for audio format:', audio_format)
+        print('Processing:', rootFolderPath, 'for audio format:', audio_format, ' at threshold', det_threshold)
 
         i_signal = 0
         with torch.no_grad():
@@ -131,14 +131,14 @@ def write_output(rootFolderPath, audio_format,  dir_out=None, det_threshold=0.5,
                                 else:
                                     output_filename = filename # no file extension present
 
-                                text_output_filename = os.path.join(root_out, output_filename) + '_MIDS_step_' + str(step_size) + '_samples_' + str(n_samples) + '_'+ str(model_name) + '.txt'
+                                text_output_filename = os.path.join(root_out, output_filename) + '_MIDS_step_' + str(step_size) + '_samples_' + str(n_samples) + '_'+ str(model_name) + '_' + str(det_threshold) + '.txt'
                                 np.savetxt(text_output_filename, preds_list, fmt='%s', delimiter='\t')
                                 
                                 if to_dash: 
                                     mozz_audio_filename, audio_length, has_mosquito = util_dash.write_audio_for_plot(text_output_filename, root, filename, output_filename, root_out, sr)
-                                    if has_mosquito:
-                                        plot_filename = plot_mids_MI(X_CNN[0][:frame_cnt,:,-step_size:], p, U_X, 0.5, root_out, output_filename)
-                                        util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
+                                   # if has_mosquito:
+                                    #    plot_filename = plot_mids_MI(X_CNN[0][:frame_cnt,:,-step_size:], p, U_X, 0.5, root_out, output_filename)
+                                     #   util_dash.write_video_for_dash(plot_filename, mozz_audio_filename, audio_length, root_out, output_filename)
                                 del X
                         except Exception as e:
                             print("[ERROR] Unable to load {}, {} ".format(os.path.join(root, filename),e))
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("--step_size", default=120, type=int, help="Step size.")
     parser.add_argument("--BNN_samples", default=1, type=int, help="Number of MC dropout samples.")
     parser.add_argument("--batch_size", default=16, type=int, help="Batch size.")
-
+    parser.add_argument("--threshold", default=0.5, type=float, help="Threshold above which event classified as mosquito.")
 
     # dir_out=None, det_threshold=0.5, n_samples=10, feat_type='log-mel',n_feat=128, win_size=40, step_size=40,
     #              n_hop=512, sr=8000, norm=False, debug=False, to_filter=False
@@ -174,9 +174,10 @@ if __name__ == "__main__":
     n_samples = args.BNN_samples
     norm_per_sample=args.norm
     batch_size = args.batch_size
+    threshold=args.threshold
 
 
     write_output(rootFolderPath, audio_format, dir_out=dir_out, norm_per_sample=norm_per_sample,
-                 win_size=win_size, step_size=step_size, to_dash=to_dash, n_samples=n_samples, batch_size=batch_size)
+                 win_size=win_size, step_size=step_size, to_dash=to_dash, n_samples=n_samples, batch_size=batch_size, det_threshold=threshold)
 
 
