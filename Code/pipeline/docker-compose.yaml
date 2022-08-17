@@ -1,0 +1,19 @@
+services:
+  humbug:
+    build: .
+    ports:
+      - 8888:8888
+      - 4200:4200
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [ gpu ]
+    volumes:
+      - ./flows:/flows/
+      - ../models:/models/
+      - ../data:/data/
