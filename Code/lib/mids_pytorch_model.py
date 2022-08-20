@@ -6,34 +6,31 @@ import torch.nn as nn
 import torchvision.transforms as T
 import torchaudio
 import librosa
+
 import timm
 from nnAudio import features
 
 
 def get_wav_for_path_pipeline(path_names, sr):
-    x = []
     signal_length = 0
-    effects = [
-                ["remix", "1"]
-            ]
+    effects = [["remix", "1"]]
     if sr:
         effects.extend([
-          #["bandpass", f"400",f"1000"],
-          #["rate", f'{sr}'],
+          # ["bandpass", f"400",f"1000"],
+          # ["rate", f'{sr}'],
           ['gain', '-n'],
-        ["highpass", f"200"]
+          ["highpass", "200"]
         ])
     for path in path_names:
         signal, rate = librosa.load(path, sr=sr)
-        waveform, _ = torchaudio.sox_effects.apply_effects_tensor(torch.tensor(signal).expand([2,-1]), sample_rate=rate, effects=effects)
+        waveform, _ = torchaudio.sox_effects.apply_effects_tensor(torch.tensor(signal).expand([2, -1]), sample_rate=rate, effects=effects)
         f = waveform[0]
         mu = torch.std_mean(f)[1]
         st = torch.std_mean(f)[0]
         # clip amplitudes
         signal = torch.clamp(f, min=mu-st*3, max=mu+st*3).unsqueeze(0)
-        x.append(signal)
-        signal_length += len(signal[0])/sr
-    return x, signal_length
+        signal_length += len(signal[0]) / sr
+    return signal, signal_length
 
 
 class Normalization():
