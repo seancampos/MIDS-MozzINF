@@ -212,21 +212,20 @@ def detect_timestamps_BNN(preds_prob, G_X, U_X, hop_length=512, det_threshold=0.
         if pred[1] > det_threshold:
             preds[i] = 1
 
-
-    frames = librosa.frames_to_samples(np.arange(len(preds)), hop_length=hop_length)  
+    frames = librosa.frames_to_samples(np.arange(len(preds)), hop_length=hop_length)
     sample_start = 0
     prob_start_idx = 0
     preds_list = []
     # mozz_pred_array = []
     for index, frame in enumerate(frames[:-1]):
-        if preds[index] != preds[index+1]:
-            sample_end = frames[index+1]
-            prob_end_idx = index+1
-            # print('sample_start', sample_start, prob_start_idx, 
+        if preds[index] != preds[index + 1]:
+            sample_end = frames[index + 1]
+            prob_end_idx = index + 1
+            # print('sample_start', sample_start, prob_start_idx,
             #  'sample_end', sample_end, prob_end_idx, 'label', preds[index])
             if preds[index] == 1:
-                preds_list.append([str(sample_start/sr), str(sample_end/sr),
-                                   "{:.4f}".format(np.mean(preds_prob[prob_start_idx:prob_end_idx][:,1])) +
+                preds_list.append([str(sample_start / sr), str(sample_end / sr),
+                                   "{:.4f}".format(np.mean(preds_prob[prob_start_idx:prob_end_idx][:, 1])) +
                                   " PE: " + "{:.4f}".format(np.mean(G_X[prob_start_idx:prob_end_idx])) + 
                                   " MI: " + "{:.4f}".format(np.mean(U_X[prob_start_idx:prob_end_idx]))])
             sample_start = frames[index+1]  
@@ -246,18 +245,9 @@ def detect_timestamps_BNN(preds_prob, G_X, U_X, hop_length=512, det_threshold=0.
     return preds_list
 
 
-
-
-
-
-
-
-
-
 # Bayesian Neural Network
 
 def active_BALD(out, X, n_classes):
-    
     if type(X) == int:
         frame_cnt = X
     else:
@@ -267,19 +257,19 @@ def active_BALD(out, X, n_classes):
     score_All = np.zeros((frame_cnt, n_classes))
     All_Entropy = np.zeros((frame_cnt,))
     for d in range(out.shape[0]):
-#         print ('Dropout Iteration', d)
-#         params = unflatten(np.squeeze(out[d]),layer_sizes,nn_weight_index)
+        #  print ('Dropout Iteration', d)
+        #  params = unflatten(np.squeeze(out[d]),layer_sizes,nn_weight_index)
         log_prob[d] = out[d]
         soft_score = np.exp(log_prob[d])
         score_All = score_All + soft_score
-        #computing F_X
-        soft_score_log = np.log2(soft_score+10e-15)
+        # computing F_X
+        soft_score_log = np.log2(soft_score + 10e-15)
         Entropy_Compute = - np.multiply(soft_score, soft_score_log)
         Entropy_Per_samp = np.sum(Entropy_Compute, axis=1)
         All_Entropy = All_Entropy + Entropy_Per_samp
- 
+
     Avg_Pi = np.divide(score_All, out.shape[0])
-    Log_Avg_Pi = np.log2(Avg_Pi+10e-15)
+    Log_Avg_Pi = np.log2(Avg_Pi + 10e-15)
     Entropy_Avg_Pi = - np.multiply(Avg_Pi, Log_Avg_Pi)
     Entropy_Average_Pi = np.sum(Entropy_Avg_Pi, axis=1)
     G_X = Entropy_Average_Pi
@@ -289,8 +279,6 @@ def active_BALD(out, X, n_classes):
 # G_X = predictive entropy
 # U_X = MI
     return G_X, U_X, log_prob
-
-
 
 
 # Further evaluation and visualisation
