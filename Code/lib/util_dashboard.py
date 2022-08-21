@@ -4,6 +4,7 @@ import numpy as np
 import csv
 import os
 import librosa
+import soundfile as sf
 
 import torch
 import torchaudio
@@ -77,7 +78,7 @@ def plot_mozz_MI(X_CNN, y, MI, p_threshold, root_out, filename, out_format='.png
 # fig.autofmt_xdate()
     return output_filename
 
-def write_audio_for_plot(text_output_filename, root, filename, output_filename, dir_out, sr):
+def write_audio_for_plot(text_output_filename, signal, output_filename, dir_out, sr):
     '''Create output audio based on input. Returns wave format. Potential for speedup for video creation by returning
     the same filetype as was input, but not implemented due to downstream processing which utilises wav files for 
     compatibility.'''
@@ -85,14 +86,6 @@ def write_audio_for_plot(text_output_filename, root, filename, output_filename, 
     mozz_meta = []
     has_mosquito = False
     start_time = 0
-    
-    signal, sample_rate = librosa.load(os.path.join(root,filename))
-    
-    waveform = torch.tensor(signal).unsqueeze(0)
-    
-    resampler = T.Resample(sample_rate, sr, dtype=waveform.dtype)
-    resampled_waveform = resampler(waveform)
-    
     with open(text_output_filename) as f:
         reader = csv.reader(f, delimiter='\t')
         for line in reader:
@@ -104,18 +97,19 @@ def write_audio_for_plot(text_output_filename, root, filename, output_filename, 
             
             mozz_meta.append([str(start_time), str(start_time + duration), line[0] + '-' + line[1] + '   P: ' + line[2]]) 
             
-            #mozz_audio_list.append(librosa.load(os.path.join(root,filename), offset=float(line[0]),
-            #                                         duration=duration, sr=sr)[0])
-            mozz_audio_list.append(resampled_waveform[:,int(float(line[0])*sr):int(float(line[1])*sr)])
+            # signal is a 1xN but sf expects 1 dim -> [0]
+            mozz_audio_list.append(signal[0][int(float(line[0]) * sr):int(float(line[1]) * sr)])
+                                    
             start_time += duration  # Append length of previous prediction to transfer i
     audio_length = start_time
-    audio_output_filename = os.path.join(dir_out, output_filename) + '_mozz_pred.wav'
+    audio_output_filename = os.path.join(dir_out, output_filename) + '_mozz_pred'
+    
     if mozz_audio_list:
-#         librosa.output.write_wav(audio_output_filename, np.hstack(mozz_audio_list), sr, norm=False)
-        torchaudio.save(audio_output_filename, torch.cat(mozz_audio_list, dim=1), sr)
+        sf.write(f'{audio_output_filename}.wav', np.hstack(mozz_audio_list), sr)
+        #librosa.output.write_wav(audio_output_filename, np.hstack(mozz_audio_list), sr, norm=False)
         has_mosquito=True
-    np.savetxt(audio_output_filename[:-4] + '.txt', mozz_meta, fmt='%s', delimiter='\t')
-    return audio_output_filename, audio_length, has_mosquito
+    np.savetxt(f'{audio_output_filename}.txt', mozz_meta, fmt='%s', delimiter='\t')
+    return f'{audio_output_filename}.wav', audio_length, has_mosquito
 
 
 def write_video_for_dash(filename_image, filename_mozz_audio, mozz_audio_length, dir_out, output_filename):

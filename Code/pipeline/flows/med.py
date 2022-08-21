@@ -7,8 +7,12 @@ import os
 import argparse
 
 # local libraries
-import util
-from mids_pytorch_model import Model, get_wav_for_path_pipeline, plot_mids_MI
+import sys
+sys.path.append("../../")
+
+from lib.util import active_BALD
+from lib.util_dashboard import write_audio_for_plot, write_video_for_dash
+from lib.mids_pytorch_model import Model, get_wav_for_path_pipeline, plot_mids_MI
 # python universe
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,7 +21,7 @@ import torch
 import torch.nn as nn
 
 
-@task(name="Get wav from path")
+#@task(name="Get wav from path")
 def _get_wav_for_path_pipeline(path, sr=8000):
     return get_wav_for_path_pipeline(path, sr)
 
@@ -56,18 +60,19 @@ def _predict_on_frames(signal, model, device, step_size, n_hop, batch_size):
         1, win_size * n_hop, step_size * n_hop).shape[1]
     for i in range(win_size // step_size):
         stacked_predictions.append(prediction_tensor[i:i + prediction_length])
+    
+    #get spectrograms w/o padding
+    list_offset = (len(spectrogram_list)-prediction_length) // 2
+    spectrograms = np.concatenate(spectrogram_list[list_offset:list_offset + prediction_length])
 
-    return torch.stack(stacked_predictions, dim=-3), np.concatenate(spectrogram_list)
+    return torch.stack(stacked_predictions, dim=-3).numpy(), spectrograms
 
 
-@task(name="build timestamp list")
-def _build_timestmap_list(predictions, signal, step_size, n_hop, sr, det_threshold):
+#@task(name="build timestamp list")
+def _build_timestmap_list(mean_predictions, G_X, U_X, time_to_sample, det_threshold):
     """Use the predictions to build an array of contiguous timestamps where the
     probability of detection is above threshold"""
-    frame_count = signal.unfold(
-        1, win_size * n_hop, step_size * n_hop).shape[1]
-    G_X, U_X, _ = util.active_BALD(np.log(predictions), frame_count, 2)
-    mean_predictions = np.mean(predictions, axis=0)
+    
     # find where the average 2nd element (positive score) is > threshold
     condition = mean_predictions[:, 1] > det_threshold
     preds_list = []
@@ -75,40 +80,21 @@ def _build_timestmap_list(predictions, signal, step_size, n_hop, sr, det_thresho
         # start and stop are frame indexes
         # so multiply by n_hop and step_size samples
         # then div by sample rate to get seconds
-        preds_list.append([str(start * n_hop * step_size / sr), str(stop * n_hop * step_size / sr),
+        preds_list.append([str(start * time_to_sample), str(stop * time_to_sample),
                            "{:.4f}".format(
                                np.mean(mean_predictions[start:stop][:, 1]))
                            + " PE: " +
                            "{:.4f}".format(np.mean(G_X[start:stop]))
                            + " MI: " + "{:.4f}".format(np.mean(U_X[start:stop]))])
 
-
-@task
-def save_text(filename, suffix, preds_list, root, rootFolderPath, dir_out=None):
-    if dir_out:
-        root_out = root.replace(rootFolderPath, dir_out)
-    else:
-        root_out = root
-
-    if not os.path.exists(root_out):
-        os.makedirs(root_out)
-
-    if filename.endswith(audio_format):
-        # remove file extension for renaming to other formats.
-        output_filename = os.path.basename(filename)
-    else:
-        output_filename = filename  # no file extension present
-
-    text_output_filename = os.path.join(root_out, output_filename) + suffix
-    np.savetxt(text_output_filename, preds_list, fmt='%s', delimiter='\t')
-
+    return preds_list
 
 def _iterate_audiofiles(rootFolderPath, audio_format):
     """Generator that yields the path and filename for each audiofile matching
     the file type"""
     for root, dirs, files in os.walk(rootFolderPath):
         for filename in files:
-            if audio_format in filename:
+            if filename.endswith(audio_format):
                 yield root, filename
 
 
@@ -141,7 +127,7 @@ def _contiguous_regions(condition):
 @flow(name="MED Inference",
       task_runner=DaskTaskRunner())
 def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, feat_type='stft',
-                 n_fft=1024, n_feat=128, win_size=30, step_size=30, n_hop=512, sr=8000,
+                 n_fft=1024, n_feat=128, win_size=30, step_size=30, n_hop=128, sr=8000,
                  norm_per_sample=True, debug=False, to_dash=False, batch_size=16):
     '''dir_out = None if we want to save files in the same folder that we read from.
        det_threshold=0.5 determines the threshold above which an event is classified as positive. See detect_timestamps for
@@ -151,8 +137,8 @@ def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, 
         'cuda:0' if torch.cuda.is_available() else torch.device("cpu"))
     model = Model('convnext_base_384_in22ft1k',
                   image_size=384, NFFT=n_fft, n_hop=n_hop)
-    checkpoint = torch.load(
-        '/models/pytorch/model_presentation_draft_2022_04_07_11_52_08.pth')
+    checkpoint = torch.load('/models/model_e1_2022_04_07_11_52_08.pth')
+        #'/models/pytorch/model_presentation_draft_2022_04_07_11_52_08.pth')
 
     model.load_state_dict(checkpoint)
     model = model.to(device)
@@ -173,12 +159,34 @@ def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, 
 
         predictions, spectrograms = _predict_on_frames(
             signal, model, device, step_size, n_hop, batch_size)
-        timestamp_list = _build_timestmap_list(
-            predictions, signal, step_size, n_hop, sr, det_threshold)
 
+        frame_count = signal.unfold(1, win_size * n_hop, step_size * n_hop).shape[1]
+        G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
+        mean_predictions = np.mean(predictions, axis=0)
+
+        print(mean_predictions)
+        
+        timestamp_list = _build_timestmap_list(mean_predictions, G_X, U_X, (n_hop * step_size / sr), det_threshold)
+
+        # file names and output directories
         file_suffix = f'_MIDS_win_{win_size}_step_{step_size}_{model_name}_{det_threshold}.txt'
-        save_text(filename, file_suffix, timestamp_list,
-                  root, rootFolderPath, dir_out)
+        if dir_out:
+            root_out = root.replace(rootFolderPath, dir_out)
+        else:
+            root_out = root
+        if not os.path.exists(root_out):
+            os.makedirs(root_out)
+        output_filename = os.path.splitext(filename)[0]
+        
+        text_output_filename = os.path.join(root_out, output_filename) + file_suffix
+        #  save text output
+        np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
+        
+        if to_dash:
+            audio_output_filename, audio_length, has_mosquito = write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
+            if has_mosquito:
+                plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
+                write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
 
 
 if __name__ == "__main__":
