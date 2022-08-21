@@ -172,8 +172,6 @@ def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, 
         G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
         mean_predictions = np.mean(predictions, axis=0)
 
-        print(mean_predictions)
-        
         timestamp_list = _build_timestmap_list(mean_predictions, G_X, U_X, (n_hop * step_size / sr), det_threshold)
 
         # file names and output directories
@@ -184,7 +182,7 @@ def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, 
         if not os.path.exists(root_out):
             os.makedirs(root_out)
         output_filename = os.path.splitext(filename)[0]
-        
+
         file_suffix = f'_win_{win_size}_step_{step_size}_{model_name}_{det_threshold}.txt'
         text_output_filename = os.path.join(root_out, output_filename) + file_suffix
         #  save text output
