@@ -123,6 +123,57 @@ def _contiguous_regions(condition):
     idx.shape = (-1, 2)
     return idx
 
+@task(name="write audio")
+def _write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr):
+    return write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
+
+@task(name="write video")
+def _write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename):
+    write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
+
+@task(name="process sample")
+def _process_sample(root, filename, model, device, rootFolderPath, win_size, step_size, n_hop, sr, batch_size, det_threshold, file_suffix):
+    logger = get_run_logger()
+    
+    signal, signal_length = _get_wav_for_path_pipeline(
+        [os.path.join(root, filename)], sr=sr)
+    if signal_length < (n_hop * win_size) / sr:
+        logger.info(
+            f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
+        return
+    else:
+        logger.info(f"Read {filename}.  Signal Length: {signal_length}")
+
+    predictions, spectrograms = _predict_on_frames(
+        signal, model, device, step_size, n_hop, batch_size)
+
+    frame_count = signal.unfold(1, win_size * n_hop, step_size * n_hop).shape[1]
+    G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
+    mean_predictions = np.mean(predictions, axis=0)
+
+    print(mean_predictions)
+    
+    timestamp_list = _build_timestmap_list(mean_predictions, G_X, U_X, (n_hop * step_size / sr), det_threshold)
+
+    # file names and output directories
+    if dir_out:
+        root_out = root.replace(rootFolderPath, dir_out)
+    else:
+        root_out = root
+    if not os.path.exists(root_out):
+        os.makedirs(root_out)
+    output_filename = os.path.splitext(filename)[0]
+
+    text_output_filename = os.path.join(root_out, output_filename) + file_suffix
+    #  save text output
+    np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
+    
+    if to_dash:
+        audio_output_filename, audio_length, has_mosquito = _write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
+        if has_mosquito:
+            plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
+            _write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
+
 
 @flow(name="MED Inference",
       task_runner=DaskTaskRunner())
@@ -148,46 +199,11 @@ def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, 
     logger = get_run_logger()
 
     for root, filename in _iterate_audiofiles(rootFolderPath, audio_format):
-        signal, signal_length = _get_wav_for_path_pipeline(
-            [os.path.join(root, filename)], sr=sr)
-        if signal_length < (n_hop * win_size) / sr:
-            logger.info(
-                f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
-            break
-        else:
-            logger.info(f"Read {filename}.  Signal Length: {signal_length}")
-
-        predictions, spectrograms = _predict_on_frames(
-            signal, model, device, step_size, n_hop, batch_size)
-
-        frame_count = signal.unfold(1, win_size * n_hop, step_size * n_hop).shape[1]
-        G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
-        mean_predictions = np.mean(predictions, axis=0)
-
-        print(mean_predictions)
+        file_suffix = f'_win_{win_size}_step_{step_size}_{model_name}_{det_threshold}.txt'
+        _process_sample(root, filename, model, device, rootFolderPath, 
+            win_size, step_size, n_hop, sr, 
+            batch_size, det_threshold, file_suffix)
         
-        timestamp_list = _build_timestmap_list(mean_predictions, G_X, U_X, (n_hop * step_size / sr), det_threshold)
-
-        # file names and output directories
-        file_suffix = f'_MIDS_win_{win_size}_step_{step_size}_{model_name}_{det_threshold}.txt'
-        if dir_out:
-            root_out = root.replace(rootFolderPath, dir_out)
-        else:
-            root_out = root
-        if not os.path.exists(root_out):
-            os.makedirs(root_out)
-        output_filename = os.path.splitext(filename)[0]
-        
-        text_output_filename = os.path.join(root_out, output_filename) + file_suffix
-        #  save text output
-        np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
-        
-        if to_dash:
-            audio_output_filename, audio_length, has_mosquito = write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
-            if has_mosquito:
-                plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
-                write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
-
 
 if __name__ == "__main__":
     # print(my_flow('./sample_files/r2022-07-26_00.00.00.410__v6.aac_u2022-07-26_06.00.24.521642.aac'))
@@ -227,3 +243,5 @@ if __name__ == "__main__":
 
     write_output(rootFolderPath, audio_format, dir_out=dir_out, norm_per_sample=norm_per_sample,
                  win_size=win_size, step_size=step_size, to_dash=to_dash, det_threshold=det_threshold)
+
+# python med.py --dir_out /data/output --win_size=360 --step_size=120 --to_dash True /data .aac
