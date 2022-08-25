@@ -15,7 +15,9 @@ from lib.util_dashboard import write_audio_for_plot, write_video_for_dash
 from lib.mids_pytorch_model import Model, get_wav_for_path_pipeline, plot_mids_MI
 # python universe
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+from tqdm.cli import tqdm
 # nn
 import torch
 import torch.nn as nn
@@ -134,7 +136,7 @@ def _write_video_for_dash(plot_filename, audio_output_filename, audio_length, ro
 
 @flow(name="MED Inference",
       task_runner=DaskTaskRunner())
-def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, feat_type='stft',
+def write_output(rootFolderPath, csv_filename, audio_format, dir_out=None, det_threshold=0.5, feat_type='stft',
                  n_fft=1024, n_feat=128, win_size=30, step_size=30, n_hop=128, sr=8000,
                  norm_per_sample=True, debug=False, to_dash=False, batch_size=16):
     '''dir_out = None if we want to save files in the same folder that we read from.
@@ -155,18 +157,20 @@ def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, 
 
     logger = get_run_logger()
 
-    for root, filename in _iterate_audiofiles(rootFolderPath, audio_format):
-        signal, signal_length = _get_wav_for_path_pipeline(
-            [os.path.join(root, filename)], sr=sr)
+    files_df = pd.read_csv(csv_filename, low_memory=False)
+
+    for _, file_row in tdqm(files_df.iterrows(), total=len(files_df)):
+        filename = file_row['filename']
+        root = os.path.join(rootFolderPath, file_row['path'])
+
+        signal, signal_length = _get_wav_for_path_pipeline([os.path.join(root, filename)], sr=sr)
         if signal_length < (n_hop * win_size) / sr:
-            logger.info(
-                f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
+            logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
             break
         else:
             logger.info(f"Read {filename}.  Signal Length: {signal_length}")
 
-        predictions, spectrograms = _predict_on_frames(
-            signal, model, device, step_size, n_hop, batch_size)
+        predictions, spectrograms = _predict_on_frames(signal, model, device, step_size, n_hop, batch_size)
 
         frame_count = signal.unfold(1, win_size * n_hop, step_size * n_hop).shape[1]
         G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
@@ -176,9 +180,10 @@ def write_output(rootFolderPath, audio_format, dir_out=None, det_threshold=0.5, 
 
         # file names and output directories
         if dir_out:
-            root_out = root.replace(rootFolderPath, dir_out)
+            root_out = os.path.join(dir_out, file_row['path'])
         else:
-            root_out = root
+            root_out = os.path.join(rootFolderPath, file_row['path'])
+        
         if not os.path.exists(root_out):
             os.makedirs(root_out)
         output_filename = os.path.splitext(filename)[0]
