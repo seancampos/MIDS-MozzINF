@@ -5,6 +5,7 @@
 # python common
 import os
 import argparse
+import logging
 
 # local libraries
 import sys
@@ -21,6 +22,9 @@ from tqdm.cli import tqdm
 # nn
 import torch
 import torch.nn as nn
+
+def get_run_logger():
+    return logging.getLogger()
 
 
 #@task(name="Get wav from path")
@@ -147,8 +151,7 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
         'cuda:0' if torch.cuda.is_available() else torch.device("cpu"))
     model = Model('convnext_base_384_in22ft1k',
                   image_size=384, NFFT=n_fft, n_hop=n_hop)
-    checkpoint = torch.load('/models/model_e1_2022_04_07_11_52_08.pth')
-        #'/models/pytorch/model_presentation_draft_2022_04_07_11_52_08.pth')
+    checkpoint = torch.load('../../models/model_presentation_draft_2022_04_07_11_52_08.pth')
 
     model.load_state_dict(checkpoint)
     model = model.to(device)
@@ -159,7 +162,7 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
 
     files_df = pd.read_csv(csv_filename, low_memory=False)
 
-    for _, file_row in tdqm(files_df.iterrows(), total=len(files_df)):
+    for _, file_row in tqdm(files_df.iterrows(), total=len(files_df)):
         filename = file_row['filename']
         root = os.path.join(rootFolderPath, file_row['path'])
 
