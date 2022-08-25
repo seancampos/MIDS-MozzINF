@@ -23,6 +23,8 @@ from tqdm.cli import tqdm
 import torch
 import torch.nn as nn
 
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+
 def get_run_logger():
     return logging.getLogger()
 
