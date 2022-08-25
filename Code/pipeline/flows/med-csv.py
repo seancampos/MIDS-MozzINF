@@ -185,7 +185,7 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
             signal, signal_length = _get_wav_for_path_pipeline([os.path.join(root, filename)], sr=sr)
             if signal_length < (n_hop * win_size) / sr:
                 logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
-                break
+                continue
             else:
                 logger.info(f"Read {filename}.  Signal Length: {signal_length}")
 
