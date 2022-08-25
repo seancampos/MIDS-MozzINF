@@ -199,13 +199,9 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
 
             #  save text output
             np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
-        
-            if to_dash:
-                audio_output_filename, audio_length, has_mosquito = _write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
-                if has_mosquito:
-                    plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
-                    _write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
-
+            
+            plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
+            
             
 
 if __name__ == "__main__":
