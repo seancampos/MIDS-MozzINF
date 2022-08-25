@@ -166,21 +166,6 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
         filename = file_row['filename']
         root = os.path.join(rootFolderPath, file_row['path'])
 
-        signal, signal_length = _get_wav_for_path_pipeline([os.path.join(root, filename)], sr=sr)
-        if signal_length < (n_hop * win_size) / sr:
-            logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
-            break
-        else:
-            logger.info(f"Read {filename}.  Signal Length: {signal_length}")
-
-        predictions, spectrograms = _predict_on_frames(signal, model, device, step_size, n_hop, batch_size)
-
-        frame_count = signal.unfold(1, win_size * n_hop, step_size * n_hop).shape[1]
-        G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
-        mean_predictions = np.mean(predictions, axis=0)
-
-        timestamp_list = _build_timestmap_list(mean_predictions, G_X, U_X, (n_hop * step_size / sr), det_threshold)
-
         # file names and output directories
         if dir_out:
             root_out = os.path.join(dir_out, file_row['path'])
@@ -193,14 +178,31 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
 
         file_suffix = f'_win_{win_size}_step_{step_size}_{model_name}_{det_threshold}.txt'
         text_output_filename = os.path.join(root_out, output_filename) + file_suffix
-        #  save text output
-        np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
+
+        if not os.path.exists(text_output_filename):
+            signal, signal_length = _get_wav_for_path_pipeline([os.path.join(root, filename)], sr=sr)
+            if signal_length < (n_hop * win_size) / sr:
+                logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
+                break
+            else:
+                logger.info(f"Read {filename}.  Signal Length: {signal_length}")
+
+            predictions, spectrograms = _predict_on_frames(signal, model, device, step_size, n_hop, batch_size)
+
+            frame_count = signal.unfold(1, win_size * n_hop, step_size * n_hop).shape[1]
+            G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
+            mean_predictions = np.mean(predictions, axis=0)
+
+            timestamp_list = _build_timestmap_list(mean_predictions, G_X, U_X, (n_hop * step_size / sr), det_threshold)
+
+            #  save text output
+            np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
         
-        if to_dash:
-            audio_output_filename, audio_length, has_mosquito = _write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
-            if has_mosquito:
-                plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
-                _write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
+            if to_dash:
+                audio_output_filename, audio_length, has_mosquito = _write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
+                if has_mosquito:
+                    plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
+                    _write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
 
             
 
