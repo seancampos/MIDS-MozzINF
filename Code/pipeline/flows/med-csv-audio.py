@@ -6,6 +6,7 @@
 import os
 import argparse
 import logging
+import time
 
 # local libraries
 import sys
@@ -90,6 +91,7 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
                 # if to_dash:
                     audio_output_filename, audio_length, has_mosquito = _write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
                     files_df.loc[row_index, 'done'] = 1
+        time.sleep(30)
                     
 
 if __name__ == "__main__":
