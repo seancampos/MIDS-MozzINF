@@ -136,7 +136,7 @@ def _write_video_for_dash(plot_filename, audio_output_filename, audio_length, ro
 
 @flow(name="MED Inference",
       task_runner=DaskTaskRunner())
-def write_output(rootFolderPath, csv_filename, audio_format, dir_out=None, det_threshold=0.5, feat_type='stft',
+def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, feat_type='stft',
                  n_fft=1024, n_feat=128, win_size=30, step_size=30, n_hop=128, sr=8000,
                  norm_per_sample=True, debug=False, to_dash=False, batch_size=16):
     '''dir_out = None if we want to save files in the same folder that we read from.
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "rootFolderPath", help="Source destination of audio files. Can be a parent directory.")
     parser.add_argument(
-        "audio_format", help="Any file format supported by librosa load.")
+        "csv_filename", help="Location of CSV file with paths")
     parser.add_argument(
         "--dir_out", help="Output directory. If not specified, predictions are output to the same folder as source.")
     parser.add_argument("--to_dash", default=False, type=bool,
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     rootFolderPath = args.rootFolderPath
-    audio_format = args.audio_format
+    csv_filename = args.csv_filename
     dir_out = args.dir_out
     to_dash = args.to_dash
     win_size = args.win_size
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     norm_per_sample = args.norm
     det_threshold = args.threshold
 
-    write_output(rootFolderPath, audio_format, dir_out=dir_out, norm_per_sample=norm_per_sample,
+    write_output(rootFolderPath, csv_filename, dir_out=dir_out, norm_per_sample=norm_per_sample,
                  win_size=win_size, step_size=step_size, to_dash=to_dash, det_threshold=det_threshold)
 
 # python med.py --dir_out /data/output --win_size=360 --step_size=120 --to_dash True /data .aac
