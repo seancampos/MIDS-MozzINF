@@ -1,6 +1,6 @@
 # prefect
-from prefect import flow, task, get_run_logger
-from prefect_dask.task_runners import DaskTaskRunner
+# from prefect import flow, task, get_run_logger
+# from prefect_dask.task_runners import DaskTaskRunner
 
 # python common
 import os
@@ -28,7 +28,7 @@ def _get_wav_for_path_pipeline(path, sr=8000):
     return get_wav_for_path_pipeline(path, sr)
 
 
-@task(name="predict on frames")
+# @task(name="predict on frames")
 def _predict_on_frames(signal, model, device, step_size, n_hop, batch_size):
     # padding is the difference between the win size and step size
     # The first window is silence prepended to the step size to fill the WindowsError
@@ -125,17 +125,17 @@ def _contiguous_regions(condition):
     idx.shape = (-1, 2)
     return idx
 
-@task(name="write audio")
+# @task(name="write audio")
 def _write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr):
     return write_audio_for_plot(text_output_filename, signal, output_filename, root_out, sr)
 
-@task(name="write video")
+# @task(name="write video")
 def _write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename):
     write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
 
 
-@flow(name="MED Inference",
-      task_runner=DaskTaskRunner())
+# @flow(name="MED Inference",
+    #   task_runner=DaskTaskRunner())
 def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, feat_type='stft',
                  n_fft=1024, n_feat=128, win_size=30, step_size=30, n_hop=128, sr=8000,
                  norm_per_sample=True, debug=False, to_dash=False, batch_size=16):
