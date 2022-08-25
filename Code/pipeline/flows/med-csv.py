@@ -200,7 +200,10 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
             #  save text output
             np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
             
-            plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
+            try:
+                plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
+            except:
+                pass
             
             
 
