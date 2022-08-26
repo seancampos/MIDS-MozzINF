@@ -65,13 +65,6 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
                 filename = file_row['filename']
                 root = os.path.join(rootFolderPath, file_row['path'])
 
-                if signal_length < (n_hop * win_size) / sr:
-                    logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
-                    files_df.loc[row_index, 'done'] = 1
-                    break
-                else:
-                    logger.info(f"Read {filename}.  Signal Length: {signal_length}")
-
                 # file names and output directories
                 if dir_out:
                     root_out = os.path.join(dir_out, file_row['path'])
@@ -89,6 +82,14 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
                          and os.path.exists(plot_filename) and not os.path.exists(video_output_filename):
 
                     _, signal_length = _get_wav_for_path_pipeline(audio_output_filename, sr=sr)
+
+                    if signal_length < (n_hop * win_size) / sr:
+                        logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
+                        files_df.loc[row_index, 'done'] = 1
+                        continue
+                    else:
+                        logger.info(f"Read {filename}.  Signal Length: {signal_length}")
+
                     audio_length = signal_length / sr
                     _write_video_for_dash(plot_filename, audio_output_filename, audio_length, root_out, output_filename)
                 
