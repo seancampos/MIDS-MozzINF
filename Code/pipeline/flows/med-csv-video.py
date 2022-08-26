@@ -81,7 +81,7 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
                 if os.path.exists(text_output_filename) and os.path.exists(audio_output_filename)\
                          and os.path.exists(plot_filename) and not os.path.exists(video_output_filename):
 
-                    _, signal_length = _get_wav_for_path_pipeline(audio_output_filename, sr=sr)
+                    _, signal_length = _get_wav_for_path_pipeline([audio_output_filename], sr=sr)
 
                     if signal_length < (n_hop * win_size) / sr:
                         logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
