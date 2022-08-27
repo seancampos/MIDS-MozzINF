@@ -182,25 +182,26 @@ def write_output(rootFolderPath, csv_filename, dir_out=None, det_threshold=0.5, 
         text_output_filename = os.path.join(root_out, output_filename) + file_suffix
 
         if not os.path.exists(text_output_filename):
-            signal, signal_length = _get_wav_for_path_pipeline([os.path.join(root, filename)], sr=sr)
-            if signal_length < (n_hop * win_size) / sr:
-                logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
-                continue
-            else:
-                logger.info(f"Read {filename}.  Signal Length: {signal_length}")
-
-            predictions, spectrograms = _predict_on_frames(signal, model, device, step_size, n_hop, batch_size)
-
-            frame_count = signal.unfold(1, win_size * n_hop, step_size * n_hop).shape[1]
-            G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
-            mean_predictions = np.mean(predictions, axis=0)
-
-            timestamp_list = _build_timestmap_list(mean_predictions, G_X, U_X, (n_hop * step_size / sr), det_threshold)
-
-            #  save text output
-            np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
-            
             try:
+                signal, signal_length = _get_wav_for_path_pipeline([os.path.join(root, filename)], sr=sr)
+                if signal_length < (n_hop * win_size) / sr:
+                    logger.info(f"{filename} too short. {signal_length} < {(n_hop * win_size) / sr}")
+                    continue
+                else:
+                    logger.info(f"Read {filename}.  Signal Length: {signal_length}")
+
+                predictions, spectrograms = _predict_on_frames(signal, model, device, step_size, n_hop, batch_size)
+
+                frame_count = signal.unfold(1, win_size * n_hop, step_size * n_hop).shape[1]
+                G_X, U_X, _ = active_BALD(np.log(predictions), frame_count, 2)
+                mean_predictions = np.mean(predictions, axis=0)
+
+                timestamp_list = _build_timestmap_list(mean_predictions, G_X, U_X, (n_hop * step_size / sr), det_threshold)
+
+                #  save text output
+                np.savetxt(text_output_filename, timestamp_list, fmt='%s', delimiter='\t')
+                
+            
                 plot_filename = plot_mids_MI(spectrograms, mean_predictions[:,1], U_X, det_threshold, root_out, output_filename)
             except:
                 pass
